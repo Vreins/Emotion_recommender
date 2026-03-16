@@ -631,3 +631,8 @@ def recommend_from_books(book: str):
     book_list = book_recommender(book)
 
     return book_list
+
+
+from mangum import Mangum
+
+handler = Mangum(app)
