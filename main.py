@@ -12,7 +12,8 @@ import numpy as np
 from PIL import Image
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from functools import lru_cache
 from fastapi.middleware.cors import CORSMiddleware
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -28,6 +29,8 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
@@ -73,24 +76,49 @@ DICT_EMO = [
 # Load DataFrame
 # -----------------------------
 
+@lru_cache()
+def load_movie_model():
+
+    movies_df = pd.read_csv("movies_data.csv")
+    movies_df = movies_df[movies_df["genres"].notna()]
+
+    tfidf = TfidfVectorizer(stop_words="english")
+
+    tfidf_matrix = tfidf.fit_transform(movies_df["combined"])
+
+    return movies_df, tfidf_matrix
+
+@lru_cache()
+def load_book_model():
+
+    books_df = pd.read_csv("books_dataset.csv")
+
+    books_df = books_df.fillna({
+        "authors": "Unknown",
+        "thumbnail": "",
+        "preview_link": ""
+    })
+
+    tfidf = TfidfVectorizer(stop_words="english")
+
+    tfidf_matrix = tfidf.fit_transform(books_df["combined"])
+
+    return books_df, tfidf_matrix
+
 songs_df=pd.read_csv("./tracks.csv")
 movies_df = pd.read_csv("./movies_data.csv")
-movies_df = movies_df[movies_df["genres"].notna()]
-cv = CountVectorizer()
-count_vectorizer_matrix = cv.fit_transform(movies_df["combined"])
-similarity_mat=cosine_similarity(count_vectorizer_matrix)
+# movies_df = movies_df[movies_df["genres"].notna()]
+# cv = CountVectorizer()
+# count_vectorizer_matrix = cv.fit_transform(movies_df["combined"])
+# similarity_mat=cosine_similarity(count_vectorizer_matrix)
 
 df_features_scaled=pd.read_csv("tracks_features_scaled.csv")
 
 books_df = pd.read_csv("./books_dataset.csv")
-books_df = books_df.fillna({
-    "authors": "Unknown",
-    "thumbnail": "",
-    "preview_link": ""
-})
-book_cv = CountVectorizer()
-book_count_vectorizer_matrix = book_cv.fit_transform(books_df["combined"])
-book_similarity_mat=cosine_similarity(book_count_vectorizer_matrix)
+
+# book_cv = CountVectorizer()
+# book_count_vectorizer_matrix = book_cv.fit_transform(books_df["combined"])
+# book_similarity_mat=cosine_similarity(book_count_vectorizer_matrix)
 # -----------------------------
 # Emotion inference
 # -----------------------------
@@ -349,38 +377,45 @@ def content_based_recommender(track_name, n_recommendations=50):
 # -----------------------
 def movie_recommender(movie_title):
 
+    movies_df, tfidf_matrix = load_movie_model()
+
     movie_title = movie_title.lower()
 
-    if movie_title not in movies_df["title"].str.lower().values:
+    matches = movies_df[
+        movies_df["title"].str.lower() == movie_title
+    ]
+
+    if matches.empty:
         return []
 
-    movie_index = movies_df[
-        movies_df["title"].str.lower() == movie_title
-    ].index[0]
+    idx = matches.index[0]
 
-    movie_list = list(enumerate(similarity_mat[movie_index]))
+    sim_scores = cosine_similarity(
+        tfidf_matrix[idx],
+        tfidf_matrix
+    ).flatten()
 
-    movie_list = sorted(movie_list, key=lambda x: x[1], reverse=True)
-
-    movie_list = movie_list[1:11]
+    top_indices = sim_scores.argsort()[-11:-1][::-1]
 
     movie_array = []
 
-    for i in range(len(movie_list)):
-
-        idx = movie_list[i][0]
+    for i in top_indices:
 
         movie_array.append({
-            "title": movies_df["title"][idx].title(),
-            "genres": movies_df["genres_orig"][idx],
-            "cast": " ".join(movies_df.loc[idx, "cast_orig"].split(",")[:3]) if isinstance(movies_df.loc[idx, "cast_orig"], str) else "N/A",  # Show top 5 cast members
-            "id": movies_df["id"][idx],
-            "imdb_id": movies_df["imdb_id"][idx]
+            "title": movies_df.iloc[i]["title"],
+            "genres": movies_df.iloc[i]["genres_orig"],
+            "cast": " ".join(
+                str(movies_df.iloc[i]["cast_orig"]).split(",")[:3]
+            ),
+            "id": movies_df.iloc[i]["id"],
+            "imdb_id": movies_df.iloc[i]["imdb_id"]
         })
 
     return movie_array
 
 def book_recommender(book_title):
+
+    books_df, tfidf_matrix = load_book_model()
 
     matches = books_df[
         books_df["title"].str.contains(book_title, case=False, na=False)
@@ -389,25 +424,27 @@ def book_recommender(book_title):
     if matches.empty:
         return []
 
-    book_index = matches.index[0]
+    idx = matches.index[0]
 
-    book_list = list(enumerate(book_similarity_mat[book_index]))
-    book_list = sorted(book_list, key=lambda x: x[1], reverse=True)
-    book_list = book_list[1:11]
+    sim_scores = cosine_similarity(
+        tfidf_matrix[idx],
+        tfidf_matrix
+    ).flatten()
 
-    book_array = []
+    top_indices = sim_scores.argsort()[-11:-1][::-1]
 
-    for i in range(len(book_list)):
-        idx = book_list[i][0]
+    results = []
 
-        book_array.append({
-            "title": books_df["title"][idx],
-            "authors": books_df["authors"][idx] if pd.notna(books_df["authors"][idx]) else "Unknown",
-            "thumbnail": books_df["thumbnail"][idx] if pd.notna(books_df["thumbnail"][idx]) else "",
-            "preview": books_df["preview_link"][idx] if pd.notna(books_df["preview_link"][idx]) else ""
+    for i in top_indices:
+
+        results.append({
+            "title": books_df.iloc[i]["title"],
+            "authors": books_df.iloc[i]["authors"],
+            "thumbnail": books_df.iloc[i]["thumbnail"],
+            "preview": books_df.iloc[i]["preview_link"]
         })
 
-    return book_array
+    return results
 # -----------------------
 # ROUTES
 # -----------------------
@@ -632,7 +669,3 @@ def recommend_from_books(book: str):
 
     return book_list
 
-
-from mangum import Mangum
-
-handler = Mangum(app)
