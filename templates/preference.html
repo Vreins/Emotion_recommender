@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Similar Content Finder</title>
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #0f172a;
+  color: white;
+  font-family: 'Segoe UI', Arial;
+  padding: 20px 30px;
+}
+
+/* HEADER NAV */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+header h1 {
+  font-size: 24px;
+}
+
+header nav a {
+  margin-left: 20px;
+  color: #6366f1;
+  text-decoration: none;
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+header nav a:hover {
+  color: #4f46e5;
+}
+
+/* RADIO SELECT */
+.radio-group {
+  margin-bottom: 20px;
+}
+
+.radio-group label {
+  margin-right: 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* SEARCH */
+#query {
+  width: 300px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: none;
+}
+
+button {
+  background: #6366f1;
+  border: none;
+  padding: 10px 18px;
+  color: white;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-left: 10px;
+  transition: 0.2s;
+}
+
+button:hover {
+  background: #4f46e5;
+}
+
+/* SUGGESTIONS */
+#suggestions {
+  max-width: 320px;
+  margin: 10px auto;
+  text-align: left;
+}
+
+.suggestion {
+  background: #1e293b;
+  padding: 8px;
+  cursor: pointer;
+  border-bottom: 1px solid #334155;
+  transition: 0.2s;
+}
+
+.suggestion:hover {
+  background: #334155;
+}
+
+/* RESULTS GRID */
+#results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+  margin-top: 30px;
+  overflow-y: auto;
+  max-height: 70vh; /* vertical scroll */
+  padding-right: 5px;
+}
+
+/* CARD */
+.card {
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: 0.25s;
+  position: relative;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+/* IMAGE */
+.card img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+/* TEXT */
+.card h3 {
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.card p {
+  font-size: 13px;
+  color: #cbd5f5;
+}
+
+/* BUTTONS */
+.spotify {
+  background: #1db954;
+  padding: 7px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: white;
+  font-size: 13px;
+  margin-top: 5px;
+}
+
+.movie-btn {
+  background: #ef4444;
+  padding: 6px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: white;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.book-btn {
+  background: #2563eb;
+  padding: 6px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: white;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+/* SKELETON LOADER */
+.skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: shine 1.5s infinite;
+  border-radius: 12px;
+  height: 330px;
+}
+
+@keyframes shine {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* RESPONSIVE COLUMNS */
+@media (max-width: 1400px) {
+  #results { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+}
+
+@media (max-width: 1000px) {
+  #results { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  #results { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Find Similar Content</h1>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/emotion-page">Emotion</a>
+  </nav>
+</header>
+
+<div class="radio-group">
+  <label><input type="radio" name="type" value="songs" checked> 🎵 Songs</label>
+  <label><input type="radio" name="type" value="movies"> 🎬 Movies</label>
+  <label><input type="radio" name="type" value="books"> 📚 Books</label>
+</div>
+
+<input id="query" placeholder="Search..." oninput="searchSuggestions()"/>
+<button onclick="search()">Search</button>
+
+<div id="suggestions"></div>
+
+<div id="results">
+  <!-- results will appear here -->
+</div>
+
+<script>
+function getSelectedType(){
+  return document.querySelector('input[name="type"]:checked').value;
+}
+
+document.querySelectorAll('input[name="type"]').forEach(radio=>{
+  radio.addEventListener("change", ()=>{
+    document.getElementById("suggestions").innerHTML=""
+    document.getElementById("results").innerHTML = ""; // clear results when type changes
+  })
+})
+
+async function searchSuggestions(){
+  let q=document.getElementById("query").value
+  let type=getSelectedType()
+
+  if(q.length<2){
+    document.getElementById("suggestions").innerHTML=""
+    return
+  }
+
+  let res=await fetch(`/search/${type}?query=${q}`)
+  let data=await res.json()
+  let div=document.getElementById("suggestions")
+  div.innerHTML=""
+  data.forEach(item=>{
+    div.innerHTML+=`<div class="suggestion" onclick="selectItem('${item}')">${item}</div>`
+  })
+}
+
+function selectItem(item){
+  document.getElementById("query").value=item
+  document.getElementById("suggestions").innerHTML=""
+  search()
+}
+
+async function search(){
+  let q=document.getElementById("query").value
+  let type=getSelectedType()
+  let endpoint=""
+
+  if(type==="songs") endpoint=`/preference/from-track?track=${encodeURIComponent(q)}`
+  if(type==="movies") endpoint=`/preference/from-movie?movie=${encodeURIComponent(q)}`
+  if(type==="books") endpoint=`/preference/from-books?book=${encodeURIComponent(q)}`
+
+  // show skeleton loader only during search
+  document.getElementById("results").innerHTML = `
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+  `;
+
+  let res=await fetch(endpoint)
+  let data=await res.json()
+
+  if(type==="songs") renderSongs(data)
+  if(type==="movies") renderMovies(data)
+  if(type==="books") renderBooks(data)
+}
+
+function renderSongs(songs){
+  let div=document.getElementById("results")
+  div.innerHTML=""
+  songs.forEach(song=>{
+    div.innerHTML+=`
+      <div class="card">
+        <img src="${song.image || ''}">
+        <h3>${song.name}</h3>
+        <p>${song.artist}</p>
+        <a class="spotify" target="_blank" href="${song.url}">Spotify</a>
+      </div>
+    `
+  })
+}
+
+function renderMovies(movies){
+  let div=document.getElementById("results")
+  div.innerHTML=""
+  movies.forEach(movie=>{
+    div.innerHTML+=`
+      <div class="card">
+        <img src="${movie.poster || ''}">
+        <h3>${movie.title}</h3>
+        <a class="movie-btn" target="_blank" href="${movie.imdb_url}">IMDB</a>
+      </div>
+    `
+  })
+}
+
+function renderBooks(books){
+  let div=document.getElementById("results")
+  div.innerHTML=""
+  books.forEach(book=>{
+    div.innerHTML+=`
+      <div class="card">
+        <img src="${book.thumbnail || ''}">
+        <h3>${book.title}</h3>
+        <p>${book.authors}</p>
+        <a class="book-btn" target="_blank" href="${book.preview}">Preview</a>
+      </div>
+    `
+  })
+}
+</script>
+</body>
+</html>

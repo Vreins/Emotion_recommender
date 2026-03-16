@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Emotion Recommender</title>
+
+<style>
+
+*{
+box-sizing:border-box;
+margin:0;
+padding:0;
+}
+
+body{
+background:#0f172a;
+color:white;
+font-family:Segoe UI, Arial;
+padding:30px;
+}
+
+/* HEADER */
+
+h1{
+text-align:center;
+margin-bottom:30px;
+}
+
+/* CAMERA */
+
+.camera-container{
+display:flex;
+flex-direction:column;
+align-items:center;
+margin-bottom:40px;
+}
+
+video{
+border-radius:12px;
+box-shadow:0 10px 30px rgba(0,0,0,0.6);
+}
+
+button{
+margin-top:15px;
+background:#6366f1;
+border:none;
+padding:12px 25px;
+color:white;
+font-size:16px;
+border-radius:8px;
+cursor:pointer;
+transition:0.2s;
+}
+
+button:hover{
+background:#4f46e5;
+}
+
+#manualEmotion{
+display:none;
+opacity:0;
+transition:0.3s;
+}
+
+#emotion{
+margin-top:15px;
+font-size:20px;
+color:#22c55e;
+}
+
+/* SECTIONS */
+
+.section{
+margin-top:50px;
+}
+
+/* NAVBAR */
+
+.navbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:30px;
+font-size:18px;
+}
+
+.navbar a{
+color:white;
+text-decoration:none;
+background:#1e293b;
+padding:8px 15px;
+border-radius:8px;
+}
+
+/* GLASS CAMERA */
+
+.glass{
+background:rgba(255,255,255,0.05);
+backdrop-filter:blur(12px);
+padding:30px;
+border-radius:16px;
+box-shadow:0 10px 40px rgba(0,0,0,0.6);
+}
+
+/* EMOTION BADGE */
+
+.emotion-badge{
+margin-top:15px;
+font-size:20px;
+background:#1e293b;
+padding:8px 16px;
+border-radius:10px;
+display:inline-block;
+}
+
+/* SCROLL BUTTONS */
+
+.scroll-buttons button{
+background:#1e293b;
+margin-left:5px;
+padding:6px 12px;
+font-size:16px;
+}
+
+/* MOVIE HOVER */
+
+.movie-card{
+position:relative;
+overflow:hidden;
+}
+
+.overlay{
+position:absolute;
+bottom:0;
+left:0;
+right:0;
+background:rgba(0,0,0,0.85);
+padding:10px;
+transform:translateY(100%);
+transition:0.3s;
+}
+
+.movie-card:hover .overlay{
+transform:translateY(0);
+}
+
+/* SKELETON */
+
+.skeleton{
+animation:pulse 1.5s infinite;
+}
+
+.skeleton-img{
+height:240px;
+background:#334155;
+border-radius:8px;
+margin-bottom:10px;
+}
+
+.skeleton-text{
+height:14px;
+background:#334155;
+margin-bottom:8px;
+border-radius:4px;
+}
+
+.skeleton-text.small{
+width:60%;
+}
+
+@keyframes pulse{
+
+0%{opacity:.5}
+50%{opacity:1}
+100%{opacity:.5}
+
+}
+
+.section-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:15px;
+}
+
+.section h2{
+font-size:22px;
+}
+
+/* HORIZONTAL SCROLLER */
+
+.row-scroll{
+display:flex;
+gap:20px;
+overflow-x:auto;
+padding-bottom:10px;
+scroll-behavior:smooth;
+}
+
+.row-scroll::-webkit-scrollbar{
+height:8px;
+}
+
+.row-scroll::-webkit-scrollbar-thumb{
+background:#334155;
+border-radius:10px;
+}
+
+/* CARD */
+
+.card{
+min-width:220px;
+max-width:220px;
+height:470px;
+background:#1e293b;
+border-radius:12px;
+padding:14px;
+text-align:center;
+display:flex;
+flex-direction:column;
+justify-content:space-between;
+transition:0.25s;
+}
+
+.card:hover{
+transform:translateY(-5px);
+box-shadow:0 8px 25px rgba(0,0,0,0.4);
+}
+
+.card img{
+width:100%;
+height:240px;
+object-fit:cover;
+border-radius:8px;
+margin-bottom:10px;
+}
+
+/* TEXT */
+
+.card h3{
+font-size:16px;
+margin-bottom:4px;
+line-height: 1.3;
+}
+
+.card p{
+font-size:14px;
+margin-bottom: 6px;
+color:#cbd5f5;
+}
+
+/* BUTTONS */
+
+.spotify{
+background:#1db954;
+padding:7px;
+border-radius:6px;
+text-decoration:none;
+color:white;
+font-size:13px;
+margin-top:5px;
+}
+
+.movie-btn{
+background:#ef4444;
+padding:6px;
+border-radius:6px;
+text-decoration:none;
+color:white;
+font-size:12px;
+margin-top:5px;
+}
+
+.book-btn{
+background:#2563eb;
+padding:6px;
+border-radius:6px;
+text-decoration:none;
+color:white;
+font-size:12px;
+margin-top:5px;
+}
+
+/* RESPONSIVE GRID OPTION */
+
+@media (min-width:1400px){
+
+.card{
+min-width:220px;
+max-width:220px;
+}
+
+}
+
+@media (max-width:900px){
+
+.card{
+min-width:180px;
+max-width:180px;
+}
+
+}
+
+@media (max-width:600px){
+
+.card{
+min-width:170px;
+max-width:170px;
+height:380px;
+}
+
+.card img{
+height:200px;
+}
+
+}
+
+
+</style>
+
+</head>
+
+<body>
+<nav class="navbar">
+
+<a href="/">🏠 Home</a>
+
+<h2>Emotion Recommender</h2>
+
+<a href="/preference-page">🔍 Find Similar</a>
+
+</nav>
+
+<h1>Emotion Based Recommender</h1>
+
+<!-- CAMERA SECTION -->
+
+<div class="camera-container glass">
+
+<video id="video" width="420" autoplay></video>
+<canvas id="canvas" style="display:none"></canvas>
+
+<button onclick="capture()">Detect Emotion</button>
+
+<div id="emotionBadge" class="emotion-badge"></div>
+<!-- Manual Emotion Selector -->
+<div id="manualEmotion" style="margin-top:15px;">
+  <p style="margin-bottom:8px;">Not your emotion? Select manually:</p>
+  <label><input type="radio" name="emotion" value="Happiness"> 😄 Happiness</label>
+  <label><input type="radio" name="emotion" value="Sadness"> 😢 Sadness</label>
+  <label><input type="radio" name="emotion" value="Anger"> 😡 Anger</label>
+  <label><input type="radio" name="emotion" value="Fear"> 😨 Fear</label>
+  <label><input type="radio" name="emotion" value="Surprise"> 😲 Surprise</label>
+  <label><input type="radio" name="emotion" value="Disgust"> 🤢 Disgust</label>
+  <label><input type="radio" name="emotion" value="Neutral"> 😐 Neutral</label>
+</div>
+
+</div>
+
+<!-- SONGS -->
+<div class="section">
+
+<div class="section-header">
+<h2>🎵 Songs</h2>
+
+<div class="scroll-buttons">
+<button onclick="scrollRow('songs',-1)">◀</button>
+<button onclick="scrollRow('songs',1)">▶</button>
+</div>
+
+</div>
+
+<div id="songs" class="row-scroll"></div>
+
+</div>
+
+
+
+<!-- MOVIES -->
+
+<div class="section">
+
+<div class="section-header">
+<h2>🎬 Movies</h2>
+<div class="scroll-buttons">
+<button onclick="scrollRow('movies',-1)">◀</button>
+<button onclick="scrollRow('movies',1)">▶</button>
+</div>
+</div>
+
+<div id="movies" class="row-scroll"></div>
+
+</div>
+
+
+<!-- BOOKS -->
+
+<div class="section">
+
+<div class="section-header">
+<h2>📚 Books</h2>
+<div class="scroll-buttons">
+<button onclick="scrollRow('books',-1)">◀</button>
+<button onclick="scrollRow('books',1)">▶</button>
+</div>
+</div>
+
+<div id="books" class="row-scroll"></div>
+
+</div>
+
+
+<script>
+function showSkeleton(id){
+
+let div=document.getElementById(id)
+
+div.innerHTML=""
+
+for(let i=0;i<10;i++){
+
+div.innerHTML+=`
+
+<div class="card skeleton">
+
+<div class="skeleton-img"></div>
+
+<div class="skeleton-text"></div>
+
+<div class="skeleton-text small"></div>
+
+</div>
+
+`
+
+}
+
+}
+
+function scrollRow(id,direction){
+
+let container=document.getElementById(id)
+
+container.scrollBy({
+left:direction*500,
+behavior:"smooth"
+})
+
+}
+
+async function capture(){
+
+let badge=document.getElementById("emotionBadge")
+
+badge.innerHTML="⏳ Capturing in 5 seconds..."
+
+setTimeout(async ()=>{
+
+let video=document.getElementById("video")
+let canvas=document.getElementById("canvas")
+
+canvas.width=video.videoWidth
+canvas.height=video.videoHeight
+
+let ctx=canvas.getContext("2d")
+
+ctx.drawImage(video,0,0)
+
+canvas.toBlob(async function(blob){
+
+let form=new FormData()
+form.append("image",blob,"face.jpg")
+
+let res=await fetch("/detect-emotion",{method:"POST",body:form})
+
+let data=await res.json()
+
+badge.innerHTML=`
+${getEmotionEmoji(data.emotion)} ${data.emotion}
+`
+
+// show manual selector after detection
+document.getElementById("manualEmotion").style.display = "block";
+badge.innerHTML=`
+${getEmotionEmoji(data.emotion)} ${data.emotion}
+`
+
+
+// show manual selector after detection
+document.getElementById("manualEmotion").style.display = "block";
+
+let manual=document.getElementById("manualEmotion")
+manual.style.display="block"
+setTimeout(()=>manual.style.opacity="1",50)
+
+loadRecommendations()
+
+})
+
+},3000)
+
+}
+
+
+
+async function loadRecommendations(){
+showSkeleton("songs")
+showSkeleton("movies")
+showSkeleton("books")
+let songs=await fetch("/recommend/songs").then(r=>r.json())
+let movies=await fetch("/recommend/movies").then(r=>r.json())
+let books=await fetch("/recommend/books").then(r=>r.json())
+
+renderSongs(songs)
+renderMovies(movies)
+renderBooks(books)
+
+}
+
+
+function getEmotionEmoji(emotion){
+
+const map={
+Happiness:"😄",
+Sadness:"😢",
+Anger:"😡",
+Fear:"😨",
+Surprise:"😲",
+Disgust:"🤢",
+Neutral:"😐"
+}
+
+return map[emotion] || "🙂"
+
+}
+
+function renderSongs(songs){
+
+let div=document.getElementById("songs")
+div.innerHTML=""
+
+songs.forEach(song=>{
+
+div.innerHTML+=`
+
+<div class="card">
+
+<img src="${song.image || ''}">
+
+<h3>${song.name}</h3>
+
+<p>${song.artist}</p>
+
+<a class="spotify" target="_blank" href="${song.url}">
+Spotify
+</a>
+
+</div>
+
+`
+
+})
+
+}
+
+
+
+function renderMovies(movies){
+
+let div=document.getElementById("movies")
+div.innerHTML=""
+
+movies.forEach(movie=>{
+
+div.innerHTML+=`
+
+<div class="card movie-card">
+
+<img src="${movie.poster || ''}">
+
+<div class="overlay">
+
+<h3>${movie.title}</h3>
+
+<p>${movie.cast}</p>
+
+<a class="movie-btn" target="_blank" href="${movie.imdb_url || '#'}">
+IMDB
+</a>
+
+<a class="movie-btn" target="_blank" href="${movie.tmdb_url || '#'}">
+TMDB
+</a>
+
+</div>
+
+</div>
+
+`
+
+})
+
+}
+
+
+
+function renderBooks(books){
+
+let div=document.getElementById("books")
+div.innerHTML=""
+
+books.forEach(book=>{
+
+div.innerHTML+=`
+
+<div class="card">
+
+<img src="${book.thumbnail || ''}">
+
+<h3>${book.title}</h3>
+
+<p>${book.authors || ""}</p>
+
+<a class="book-btn" target="_blank" href="${book.preview}">
+Preview
+</a>
+
+</div>
+
+`
+
+})
+
+}
+
+
+
+navigator.mediaDevices.getUserMedia({video:true})
+.then(stream=>{
+document.getElementById("video").srcObject=stream
+})
+
+// Listen for manual emotion selection
+document.querySelectorAll('input[name="emotion"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    const selectedEmotion = radio.value;
+    const badge = document.getElementById("emotionBadge");
+    badge.innerHTML = `${getEmotionEmoji(selectedEmotion)} ${selectedEmotion}`;
+    loadRecommendations(selectedEmotion); // reload recommendations for the selected emotion
+  });
+});
+
+// Update loadRecommendations to optionally accept emotion
+async function loadRecommendations(emotion=null){
+  showSkeleton("songs");
+  showSkeleton("movies");
+  showSkeleton("books");
+
+  // Pass emotion to backend if needed
+  let songs=await fetch("/recommend/songs").then(r=>r.json())
+  let movies=await fetch("/recommend/movies").then(r=>r.json())
+  let books=await fetch("/recommend/books").then(r=>r.json())
+
+  renderSongs(songs);
+  renderMovies(movies);
+  renderBooks(books);
+}
+
+</script>
+
+</body>
+</html>
